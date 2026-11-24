@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MemoPass • Controle de Acesso</title>
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="theme-color" content="#04363D">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    :root {
+      --memo-dark: #04363D;
+      --memo-teal: #007A8A;
+      --memo-mint: #26B8A6;
+      --memo-mint-soft: #E6F7F5;
+      --memo-coral: #E52E2D;
+      --memo-coral-dark: #C42020;
+      --memo-coral-bg: #FEF2F2;
+      --memo-bg: #F2F6F7;
+      --memo-surface: #FFFFFF;
+      --memo-text: #0A2529;
+      --memo-muted: #5C7378;
+      --memo-border: #DCE6E8;
+      --warn-main: #D97706;
+      --warn-dark: #B45309;
+      --warn-bg: #FFFBEB;
+      --warn-border: #FCD34D;
+      --radius-lg: 20px;
+      --radius-md: 12px;
+      --shadow-card: 0 12px 28px -6px rgba(4, 54, 61, 0.12), 0 4px 10px -4px rgba(4, 54, 61, 0.06);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--memo-bg);
+      margin: 0;
+      padding: 0;
+      color: var(--memo-text);
+      min-height: 100vh;
+    }
+
+    /* Cabeçalho Institucional */
+    .topbar {
+      background: linear-gradient(135deg, var(--memo-dark) 0%, var(--memo-teal) 100%);
+      color: #fff;
+      padding: 18px 20px 30px 20px;
+      position: relative;
+    }
+    .topbar-inner {
+      max-width: 480px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .brand-title { font-size: 1.12rem; font-weight: 800; letter-spacing: -0.02em; margin: 0; line-height: 1.15; }
+    .brand-title span { color: #7EE4D6; font-weight: 600; }
+    .brand-sub { font-size: 0.76rem; color: rgba(255, 255, 255, 0.82); margin-top: 2px; display: block; }
+
+    .btn-logout {
+      background: rgba(255, 255, 255, 0.14);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      padding: 7px 12px;
+      border-radius: 10px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-logout:active { background: rgba(255, 255, 255, 0.26); }
+
+    /* Container Principal */
+    .main-wrap {
+      max-width: 480px;
+      margin: -18px auto 28px auto;
+      padding: 0 14px;
+      position: relative;
+      z-index: 2;
+    }
+    .card {
+      background: var(--memo-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      padding: 22px 20px;
+      border: 1px solid rgba(220, 230, 232, 0.9);
+      animation: fadeUp 0.26s ease-out;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Toast Flutuante */
+    .toast {
+      position: fixed;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 28px);
+      max-width: 450px;
+      padding: 13px 16px;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      z-index: 999;
+      box-shadow: 0 12px 24px rgba(4, 54, 61, 0.22);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideDown 0.22s ease-out;
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translate(-50%, -14px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+    .toast-ok { background: var(--memo-teal); color: #fff; border-left: 4px solid var(--memo-mint); }
+    .toast-err { background: var(--memo-coral); color: #fff; }
+    .toast-info { background: var(--memo-dark); color: #fff; }
+
+    /* Login PIN */
+    .login-hero { text-align: center; margin-bottom: 22px; }
+    .login-badge {
+      width: 58px;
+      height: 58px;
+      border-radius: 16px;
+      background: var(--memo-mint-soft);
+      color: var(--memo-teal);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .login-dot {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--memo-coral);
+    }
+    .login-hero h2 { margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 700; color: var(--memo-dark); }
+    .login-hero p { margin: 0; font-size: 0.85rem; color: var(--memo-muted); }
+
+    .pin-input {
+      width: 100%;
+      padding: 16px;
+      border: 2px solid var(--memo-border);
+      border-radius: 14px;
+      text-align: center;
+      font-size: 1.9rem;
+      font-weight: 800;
+      letter-spacing: 10px;
+      color: var(--memo-dark);
+      background: #F7FAFA;
+    }
+    .pin-input:focus {
+      outline: none;
+      border-color: var(--memo-mint);
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(38, 184, 166, 0.16);
+    }
+
+    /* Área da Câmera Customizada (100% PT-BR) */
+    .scanner-header { text-align: center; margin-bottom: 14px; }
+    .scanner-header h2 { margin: 0 0 4px 0; font-size: 1.05rem; color: var(--memo-dark); }
+    .scanner-header p { margin: 0; font-size: 0.83rem; color: var(--memo-muted); }
+
+    .camera-stage {
+      position: relative;
+      width: 100%;
+      min-height: 220px;
+      border-radius: 16px;
+      overflow: hidden;
+      background: linear-gradient(145deg, var(--memo-dark) 0%, #074C57 100%);
+      border: 1.5px solid var(--memo-border);
+      margin-bottom: 12px;
+    }
+    #reader { width: 100%; }
+    #reader video { width: 100% !important; border-radius: 14px; display: block; }
+
+    .camera-placeholder {
+      padding: 34px 20px;
+      text-align: center;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 220px;
+    }
+    .cam-icon-circle {
+      width: 58px;
+      height: 58px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(126, 228, 214, 0.35);
+      color: #7EE4D6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+    .camera-placeholder p {
+      margin: 0;
+      font-size: 0.86rem;
+      color: rgba(255, 255, 255, 0.86);
+      max-width: 260px;
+      line-height: 1.4;
+    }
+
+    .camera-erro {
+      background: var(--memo-coral-bg);
+      border: 1px solid rgba(229, 46, 45, 0.35);
+      border-left: 4px solid var(--memo-coral);
+      color: #7F1D1D;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 0.82rem;
+      line-height: 1.45;
+      margin-bottom: 10px;
+    }
+
+    /* Formulários */
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--memo-border);
+    }
+    .section-title h2 { margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--memo-dark); }
+    .qr-chip {
+      background: var(--memo-mint-soft);
+      color: var(--memo-dark);
+      border: 1px solid rgba(38, 184, 166, 0.35);
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 8px;
+      letter-spacing: 0.03em;
+    }
+
+    .form-group { margin-bottom: 14px; }
+    .grid-2 { display: grid; grid-template-columns: 1.35fr 1fr; gap: 10px; }
+
+    label {
+      display: block;
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--memo-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+    input[type="text"], select {
+      width: 100%;
+      padding: 12px 13px;
+      border: 1.5px solid var(--memo-border);
+      border-radius: var(--radius-md);
+      font-size: 0.95rem;
+      font-family: inherit;
+      color: var(--memo-text);
+      background: #F7FAFA;
+      transition: all 0.2s;
+    }
+    input[type="text"]:focus, select:focus {
+      outline: none;
+      border-color: var(--memo-teal);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(0, 122, 138, 0.14);
+    }
+
+    /* Status da Normalização do Leito */
+    .leito-feedback {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: -6px;
+      margin-bottom: 14px;
+      font-size: 0.78rem;
+      min-height: 22px;
+    }
+    .norm-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #EBF1F2;
+      color: var(--memo-dark);
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+    .status-livre { color: var(--memo-teal); font-weight: 700; }
+    .status-buscando { color: var(--memo-muted); font-style: italic; }
+
+    /* Alerta Flexível de Visita Ativa no Leito */
+    .warn-box {
+      background: var(--warn-bg);
+      border: 1.5px solid var(--warn-border);
+      border-left: 4px solid var(--warn-main);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 16px;
+      animation: fadeUp 0.2s ease-out;
+    }
+    .warn-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--warn-dark);
+      font-size: 0.88rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .warn-list { margin: 0 0 10px 0; padding: 0; list-style: none; }
+    .warn-item {
+      background: #FFFFFF;
+      border: 1px solid #FDE68A;
+      border-radius: 9px;
+      padding: 9px 11px;
+      margin-bottom: 6px;
+      font-size: 0.84rem;
+      line-height: 1.4;
+    }
+    .warn-item strong { color: var(--memo-dark); }
+    .warn-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; font-size: 0.76rem; color: var(--memo-muted); }
+    .warn-tag { background: #FEF3C7; color: var(--warn-dark); padding: 1px 7px; border-radius: 999px; font-weight: 700; }
+    .warn-note { font-size: 0.76rem; color: #92400E; margin: 0 0 10px 0; line-height: 1.35; }
+    .warn-box input[type="text"] { background: #fff; border-color: #FCD34D; padding: 10px 12px; font-size: 0.88rem; }
+
+    /* Seletor em Pílulas */
+    .segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .seg-btn {
+      padding: 11px 6px;
+      border: 1.5px solid var(--memo-border);
+      background: #F7FAFA;
+      border-radius: 11px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--memo-muted);
+      cursor: pointer;
+      text-align: center;
+      font-family: inherit;
+    }
+    .seg-btn.active {
+      background: var(--memo-teal);
+      border-color: var(--memo-teal);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(0, 122, 138, 0.25);
+    }
+
+    /* Botões */
+    .btn {
+      width: 100%;
+      padding: 14px 16px;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 0.94rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 10px;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    .btn:active { transform: scale(0.985); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--memo-dark) 0%, var(--memo-teal) 100%);
+      color: #fff;
+      box-shadow: 0 6px 14px rgba(0, 122, 138, 0.26);
+    }
+    .btn-outline {
+      background: var(--memo-mint-soft);
+      color: var(--memo-dark);
+      border: 1.5px solid rgba(38, 184, 166, 0.45);
+    }
+    .btn-warn {
+      background: linear-gradient(135deg, var(--warn-main) 0%, var(--warn-dark) 100%);
+      color: #fff;
+      box-shadow: 0 6px 14px rgba(217, 119, 6, 0.28);
+    }
+    .btn-danger {
+      background: linear-gradient(135deg, var(--memo-coral) 0%, var(--memo-coral-dark) 100%);
+      color: #fff;
+      box-shadow: 0 6px 14px rgba(229, 46, 45, 0.26);
+    }
+    .btn-ghost { background: #EBF1F2; color: var(--memo-dark); }
+
+    .manual-box { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--memo-border); }
+    .input-row { display: flex; gap: 8px; }
+    .input-row input { flex: 1; }
+    .btn-inline {
+      width: auto;
+      margin-top: 0;
+      padding: 0 18px;
+      background: var(--memo-mint);
+      color: #fff;
+      border-radius: var(--radius-md);
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* Crachá Digital */
+    .pass-card {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1.5px solid rgba(38, 184, 166, 0.45);
+      background: #fff;
+      margin-bottom: 14px;
+    }
+    .pass-status {
+      background: linear-gradient(135deg, var(--memo-teal) 0%, var(--memo-mint) 100%);
+      color: #fff;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .status-live { display: flex; align-items: center; gap: 8px; }
+    .pulse-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.30);
+    }
+    .pass-body { padding: 18px 16px; }
+    .pass-name { font-size: 1.25rem; font-weight: 800; color: var(--memo-dark); margin: 0 0 8px 0; line-height: 1.25; }
+    .type-pill {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .pill-visitante { background: #E0F3F6; color: var(--memo-teal); }
+    .pill-acompanhante { background: var(--memo-mint-soft); color: var(--memo-dark); }
+    .pill-prestador { background: #FFF7ED; color: #C2410C; }
+
+    .dest-highlight {
+      background: #F7FAFA;
+      border: 1px solid var(--memo-border);
+      border-left: 4px solid var(--memo-teal);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+    }
+    .dest-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--memo-muted); letter-spacing: 0.05em; }
+    .dest-value { font-size: 1.08rem; font-weight: 800; color: var(--memo-dark); margin-top: 2px; }
+    .dest-leito-badge {
+      display: inline-block;
+      background: var(--memo-teal);
+      color: #fff;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .dest-sub { font-size: 0.88rem; color: var(--memo-text); margin-top: 5px; font-weight: 500; }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding-top: 12px;
+      border-top: 1px solid var(--memo-border);
+    }
+    .meta-item span { display: block; font-size: 0.72rem; color: var(--memo-muted); font-weight: 600; text-transform: uppercase; }
+    .meta-item strong { display: block; font-size: 0.88rem; color: var(--memo-dark); margin-top: 2px; }
+
+    /* Alerta Não Autorizado */
+    .alert-card {
+      background: var(--memo-coral-bg);
+      border: 1.5px solid rgba(229, 46, 45, 0.35);
+      border-radius: 16px;
+      padding: 24px 18px;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+    .alert-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(229, 46, 45, 0.14);
+      color: var(--memo-coral);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+    .alert-card h2 { margin: 0 0 6px 0; color: var(--memo-coral); font-size: 1.15rem; font-weight: 800; }
+    .alert-card p { margin: 6px 0; font-size: 0.9rem; color: #7F1D1D; line-height: 1.45; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Cabeçalho MemoPass -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2.5L4.5 5.6V11.4C4.5 16.5 7.7 21 12 22.3C16.3 21 19.5 16.5 19.5 11.4V5.6L12 2.5Z" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M8.8 12.3L11 14.5L15.6 9.8" stroke="#26B8A6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="17.5" cy="6.2" r="2" fill="#E52E2D"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">Memo<span>Pass</span></h1>
+          <span class="brand-sub" id="subtituloPerfil">Controle de Acesso</span>
+        </div>
+      </div>
+      <button id="btnSair" class="btn-logout hidden" onclick="sair()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        Sair
+      </button>
+    </div>
+  </header>
+
+  <main class="main-wrap">
+
+    <!-- 1. LOGIN POR PIN -->
+    <section id="areaLogin" class="card">
+      <div class="login-hero">
+        <div class="login-badge">
+          <span class="login-dot"></span>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <h2>Acesso do Colaborador</h2>
+        <p>Informe o PIN do seu setor para iniciar</p>
+      </div>
+      <div class="form-group">
+        <input type="password" inputmode="numeric" id="inputPin" class="pin-input" placeholder="••••" maxlength="6" onkeydown="if(event.key==='Enter') fazerLogin()">
+      </div>
+      <button class="btn btn-primary" id="btnEntrar" onclick="fazerLogin()">Validar Acesso</button>
+    </section>
+
+    <!-- 2. LEITOR DE QR CODE (100% PT-BR) -->
+    <section id="areaCamera" class="card hidden">
+      <div class="scanner-header">
+        <h2>Leitura de Crachá</h2>
+        <p>Aponte a câmera para o QR Code do visitante</p>
+      </div>
+
+      <div class="camera-stage">
+        <div id="reader"></div>
+        <div id="cameraPlaceholder" class="camera-placeholder">
+          <div class="cam-icon-circle">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+              <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+          </div>
+          <p id="cameraStatusMsg">Toque em <strong>Ativar Câmera</strong> para iniciar a leitura do crachá.</p>
+        </div>
+      </div>
+
+      <div id="cameraErroBox" class="camera-erro hidden"></div>
+
+      <button type="button" class="btn btn-primary" id="btnIniciarCamera" onclick="iniciarScanner(false)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+          <circle cx="12" cy="13" r="4"></circle>
+        </svg>
+        Ativar Câmera
+      </button>
+
+      <button type="button" class="btn btn-ghost hidden" id="btnPararCamera" onclick="pararScanner()">
+        Pausar Câmera
+      </button>
+
+      <input type="file" id="inputQrFoto" accept="image/*" capture="environment" class="hidden" onchange="lerQrDeFoto(event)">
+      <div id="readerFile" class="hidden"></div>
+      <button type="button" class="btn btn-outline" onclick="document.getElementById('inputQrFoto').click()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <polyline points="21 15 16 10 5 21"></polyline>
+        </svg>
+        Ler QR Code por Foto
+      </button>
+
+      <div class="manual-box">
+        <label for="codigoManual">Ou informe o código manualmente</label>
+        <div class="input-row">
+          <input type="text" id="codigoManual" placeholder="Ex: VIS-001" onkeydown="if(event.key==='Enter') processarCodigo(this.value)">
+          <button type="button" class="btn-inline" onclick="processarCodigo(document.getElementById('codigoManual').value)">Buscar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. CADASTRO DE ENTRADA (SÓ RECEPÇÃO) -->
+    <section id="areaEntrada" class="card hidden">
+      <div class="section-title">
+        <h2>Registrar Entrada</h2>
+        <span class="qr-chip" id="chipCrachaEntrada">VIS-001</span>
+      </div>
+      <input type="hidden" id="crachaEntrada">
+
+      <div class="form-group">
+        <label>Tipo de Acesso</label>
+        <div class="segmented">
+          <button type="button" class="seg-btn active" onclick="selecionarTipo(this, 'Visitante')">Visitante</button>
+          <button type="button" class="seg-btn" onclick="selecionarTipo(this, 'Acompanhante')">Acompanhante</button>
+          <button type="button" class="seg-btn" onclick="selecionarTipo(this, 'Prestador de Serviço')">Prestador</button>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="setor">Setor de Destino</label>
+          <select id="setor" onchange="verificarLeitoAgora(true)"></select>
+        </div>
+        <div class="form-group">
+          <label for="leito">Leito / Apto</label>
+          <input type="text" id="leito" placeholder="Ex: 203B" oninput="aoDigitarLeito()" onblur="verificarLeitoAgora(false)">
+        </div>
+      </div>
+
+      <div id="leitoFeedback" class="leito-feedback hidden">
+        <span class="norm-pill">Padrão: <strong id="leitoPadraoPreview"></strong></span>
+        <span id="leitoStatusTexto"></span>
+      </div>
+
+      <div id="alertaLeitoAtivo" class="warn-box hidden">
+        <div class="warn-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span id="warnTitulo">Atenção: já existe acesso ativo neste leito</span>
+        </div>
+        <ul id="warnLista" class="warn-list"></ul>
+        <p class="warn-note">A liberação fica a critério do controle de acesso. Caso o visitante anterior já tenha saído sem dar baixa, consulte o crachá acima para finalizar.</p>
+        <input type="text" id="motivoExtra" placeholder="Obs. da liberação extra (opcional, ex: Troca de acompanhante)">
+      </div>
+
+      <div class="form-group">
+        <label for="paciente">Nome do Paciente (opcional)</label>
+        <input type="text" id="paciente" placeholder="Ex: Maria Souza">
+      </div>
+
+      <div class="form-group">
+        <label for="nome">Nome do Visitante / Acompanhante *</label>
+        <input type="text" id="nome" placeholder="Nome completo conforme documento">
+      </div>
+
+      <div class="form-group">
+        <label for="documento">Documento (CPF ou RG) *</label>
+        <input type="text" id="documento" placeholder="Número do documento">
+      </div>
+
+      <button class="btn btn-primary" id="btnSalvarEntrada" onclick="enviarEntrada()">Confirmar Entrada</button>
+      <button class="btn btn-ghost" onclick="reiniciar()">Cancelar</button>
+    </section>
+
+    <!-- 4. CRACHÁ DIGITAL ATIVO -->
+    <section id="areaSaida" class="card hidden">
+      <div class="pass-card">
+        <div class="pass-status">
+          <div class="status-live">
+            <span class="pulse-dot"></span>
+            ACESSO AUTORIZADO
+          </div>
+          <span id="outCracha">VIS-001</span>
+        </div>
+
+        <div class="pass-body">
+          <h2 class="pass-name" id="outNome">Nome do Visitante</h2>
+          <span class="type-pill pill-visitante" id="outTipo">Visitante</span>
+
+          <div class="dest-highlight">
+            <div class="dest-label">Destino Autorizado</div>
+            <div class="dest-value">
+              <span id="outSetor">Internação</span>
+              <span id="outLeitoBadge" class="dest-leito-badge hidden"></span>
+            </div>
+            <div class="dest-sub">Paciente: <strong id="outPaciente">Não informado</strong></div>
+          </div>
+
+          <div class="meta-grid">
+            <div class="meta-item">
+              <span>Entrada Registrada</span>
+              <strong id="outEntrada">--/--/---- --:--</strong>
+            </div>
+            <div class="meta-item">
+              <span>Documento</span>
+              <strong id="outDocumento">---</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-danger hidden" id="btnDarSaida" onclick="enviarSaida()">
+        Registrar Saída e Liberar Crachá
+      </button>
+      <button class="btn btn-ghost" onclick="reiniciar()">Ler Outro Crachá</button>
+    </section>
+
+    <!-- 5. ALERTA NÃO AUTORIZADO -->
+    <section id="areaNaoAutorizado" class="card hidden">
+      <div class="alert-card">
+        <div class="alert-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="15" y1="9" x2="9" y2="15"></line>
+            <line x1="9" y1="9" x2="15" y2="15"></line>
+          </svg>
+        </div>
+        <h2>Acesso Não Autorizado</h2>
+        <p>O crachá <strong id="errCracha"></strong> não possui entrada ativa registrada na recepção.</p>
+        <p style="font-size:0.82rem; opacity:0.85;">Encaminhe a pessoa à recepção para identificação e regularização.</p>
+      </div>
+      <button class="btn btn-primary" onclick="reiniciar()">Ler Outro Crachá</button>
+    </section>
+
+  </main>
+
+  <script>
+    // =======================================================
+    // COLE AQUI A URL /exec DO SEU GOOGLE APPS SCRIPT
+    // =======================================================
+    const API_URL = https://script.google.com/a/macros/hospitalmemorial.net/s/AKfycbxiEEdp9aGeZr_lz1SS0kO7VPu1UnbhqdW6E2UbAYLe5iSs_83tHZJYxyk_Ajx0iw7Q0A/exec;
+
+    let html5QrCode = null;
+    let cameraAtiva = false;
+    let processandoLeitura = false;
+    let crachaAtual = '';
+    let tipoSelecionado = 'Visitante';
+    let MODO = 'CONSULTA';
+    let toastTimer = null;
+
+    let timerLeito = null;
+    let ultimaChaveLeito = '';
+    let consultaLeitoSeq = 0;
+    let existeAtivoNoLeito = false;
+
+    async function chamarApi(acao, dados = {}) {
+      if (!API_URL || API_URL.includes('COLE_AQUI')) {
+        throw new Error('Configure a URL do Apps Script na constante API_URL.');
+      }
+
+      const resp = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ acao, dados }),
+        redirect: 'follow'
+      });
+
+      const texto = await resp.text();
+      let json;
+      try {
+        json = JSON.parse(texto);
+      } catch (e) {
+        throw new Error('Falha ao conectar com a planilha. Verifique se o Apps Script está publicado para "Qualquer pessoa".');
+      }
+
+      if (!json.ok) {
+        throw new Error(json.erro || 'Erro ao processar solicitação.');
+      }
+      return json.dados;
+    }
+
+    window.onload = function() {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
+
+      const perfilSalvo = localStorage.getItem('memopass_perfil');
+      const descSalva = localStorage.getItem('memopass_desc');
+      if (perfilSalvo) {
+        ativarSessao(perfilSalvo, descSalva || perfilSalvo);
+      }
+    };
+
+    function normalizarLeitoLocal(texto) {
+      if (!texto) return '';
+      let limpo = String(texto)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase()
+        .trim();
+
+      limpo = limpo.replace(/^(APARTAMENTO|APTO|APT|QUARTO|QTO|LEITO|LT)[\s.\-:]*/g, '');
+      limpo = limpo.replace(/\b(APARTAMENTO|APTO|APT|QUARTO|QTO|LEITO|LT)\b/g, '');
+      limpo = limpo.replace(/[^A-Z0-9]/g, '');
+      limpo = limpo.replace(/^0+(?=\d)/, '');
+      return limpo;
+    }
+
+    function aoDigitarLeito() {
+      const bruto = document.getElementById('leito').value;
+      const norm = normalizarLeitoLocal(bruto);
+      const boxFeedback = document.getElementById('leitoFeedback');
+
+      if (!norm) {
+        boxFeedback.classList.add('hidden');
+        limparAlertaLeito();
+        ultimaChaveLeito = '';
+        return;
+      }
+
+      boxFeedback.classList.remove('hidden');
+      document.getElementById('leitoPadraoPreview').innerText = norm;
+      document.getElementById('leitoStatusTexto').className = 'status-buscando';
+      document.getElementById('leitoStatusTexto').innerText = 'Verificando...';
+
+      clearTimeout(timerLeito);
+      timerLeito = setTimeout(() => verificarLeitoAgora(false), 450);
+    }
+
+    async function verificarLeitoAgora(forcar) {
+      clearTimeout(timerLeito);
+      const setor = document.getElementById('setor').value;
+      const bruto = document.getElementById('leito').value;
+      const norm = normalizarLeitoLocal(bruto);
+
+      if (!norm) {
+        document.getElementById('leitoFeedback').classList.add('hidden');
+        limparAlertaLeito();
+        return;
+      }
+
+      const chave = setor + '|' + norm;
+      if (!forcar && chave === ultimaChaveLeito) return;
+      ultimaChaveLeito = chave;
+
+      const seqAtual = ++consultaLeitoSeq;
+      document.getElementById('leitoFeedback').classList.remove('hidden');
+      document.getElementById('leitoPadraoPreview').innerText = norm;
+      document.getElementById('leitoStatusTexto').className = 'status-buscando';
+      document.getElementById('leitoStatusTexto').innerText = 'Consultando...';
+
+      try {
+        const res = await chamarApi('verificarAtivosNoLeito', { setor, leito: norm });
+        if (seqAtual !== consultaLeitoSeq) return;
+
+        const statusEl = document.getElementById('leitoStatusTexto');
+        if (res.ativos && res.ativos.length > 0) {
+          existeAtivoNoLeito = true;
+          statusEl.className = '';
+          statusEl.style.color = '#B45309';
+          statusEl.style.fontWeight = '700';
+          statusEl.innerText = res.ativos.length + ' acesso(s) ativo(s)';
+          exibirAlertaLeito(res.leitoNormalizado, res.ativos);
+        } else {
+          existeAtivoNoLeito = false;
+          statusEl.style.color = '';
+          statusEl.className = 'status-livre';
+          statusEl.innerText = 'Leito livre';
+          limparAlertaLeito();
+        }
+      } catch (e) {
+        if (seqAtual !== consultaLeitoSeq) return;
+        document.getElementById('leitoStatusTexto').innerText = '';
+      }
+    }
+
+    function exibirAlertaLeito(leitoNorm, ativos) {
+      const box = document.getElementById('alertaLeitoAtivo');
+      const titulo = document.getElementById('warnTitulo');
+      const lista = document.getElementById('warnLista');
+      const btn = document.getElementById('btnSalvarEntrada');
+
+      titulo.innerText = `Atenção: Leito ${leitoNorm} já possui ${ativos.length} acesso(s) ativo(s)`;
+      lista.innerHTML = ativos.map(a => {
+        const tempo = a.minutos >= 60
+          ? `${Math.floor(a.minutos / 60)}h ${a.minutos % 60}min`
+          : `${a.minutos} min`;
+        const pac = a.paciente ? ` • Pac.: ${a.paciente}` : '';
+        return `
+          <li class="warn-item">
+            <strong>${a.nome}</strong>${pac}
+            <div class="warn-meta">
+              <span class="warn-tag">${a.tipo}</span>
+              <span>Crachá: <strong>${a.cracha}</strong></span>
+              <span>Entrada: ${a.entrada} (${tempo})</span>
+            </div>
+          </li>
+        `;
+      }).join('');
+
+      box.classList.remove('hidden');
+      btn.className = 'btn btn-warn';
+      btn.innerText = 'Liberar Mesmo Assim (Acesso Extra)';
+    }
+
+    function limparAlertaLeito() {
+      existeAtivoNoLeito = false;
+      document.getElementById('alertaLeitoAtivo').classList.add('hidden');
+      document.getElementById('warnLista').innerHTML = '';
+      document.getElementById('motivoExtra').value = '';
+      const btn = document.getElementById('btnSalvarEntrada');
+      btn.className = 'btn btn-primary';
+      btn.innerText = 'Confirmar Entrada';
+    }
+
+    function selecionarTipo(btn, valor) {
+      tipoSelecionado = valor;
+      document.querySelectorAll('.seg-btn').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    async function fazerLogin() {
+      const pin = document.getElementById('inputPin').value.trim();
+      if (!pin) return;
+
+      const btn = document.getElementById('btnEntrar');
+      btn.disabled = true;
+      btn.innerText = 'Verificando...';
+
+      try {
+        const res = await chamarApi('validarPin', { pin });
+        btn.disabled = false;
+        btn.innerText = 'Validar Acesso';
+
+        if (res.valido) {
+          localStorage.setItem('memopass_perfil', res.perfil);
+          localStorage.setItem('memopass_desc', res.descricao);
+          ativarSessao(res.perfil, res.descricao);
+        } else {
+          mostrarToast('PIN inválido. Verifique com a coordenação.', 'toast-err');
+          document.getElementById('inputPin').value = '';
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerText = 'Validar Acesso';
+        mostrarToast(err.message, 'toast-err', 6000);
+      }
+    }
+
+    function ativarSessao(perfil, descricao) {
+      MODO = perfil;
+      document.getElementById('subtituloPerfil').innerText =
+        descricao + (MODO === 'RECEPCAO' ? ' • Recepção' : ' • Consulta');
+      document.getElementById('btnSair').classList.remove('hidden');
+      document.getElementById('areaLogin').classList.add('hidden');
+      document.getElementById('areaCamera').classList.remove('hidden');
+
+      if (MODO === 'RECEPCAO') carregarSetores();
+      iniciarScanner(true);
+    }
+
+    function sair() {
+      pararScanner(() => {
+        localStorage.removeItem('memopass_perfil');
+        localStorage.removeItem('memopass_desc');
+        location.reload();
+      });
+    }
+
+    async function carregarSetores() {
+      try {
+        const setores = await chamarApi('getSetores');
+        const select = document.getElementById('setor');
+        select.innerHTML = setores.map(s => `<option value="${s}">${s}</option>`).join('');
+      } catch (err) {
+        mostrarToast('Erro ao carregar setores: ' + err.message, 'toast-err');
+      }
+    }
+
+    function atualizarEstadoCamera(ativa) {
+      cameraAtiva = ativa;
+      document.getElementById('cameraPlaceholder').classList.toggle('hidden', ativa);
+      document.getElementById('btnIniciarCamera').classList.toggle('hidden', ativa);
+      document.getElementById('btnPararCamera').classList.toggle('hidden', !ativa);
+    }
+
+    function iniciarScanner(silencioso) {
+      if (cameraAtiva) return;
+      processandoLeitura = false;
+      const errBox = document.getElementById('cameraErroBox');
+      const btn = document.getElementById('btnIniciarCamera');
+      errBox.classList.add('hidden');
+
+      if (!silencioso) {
+        btn.disabled = true;
+        btn.innerText = 'Abrindo câmera...';
+      }
+
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+      }
+
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        onScanSuccess,
+        () => {}
+      ).then(() => {
+        btn.disabled = false;
+        btn.innerText = 'Ativar Câmera';
+        atualizarEstadoCamera(true);
+      }).catch(err => {
+        btn.disabled = false;
+        btn.innerText = 'Ativar Câmera';
+        atualizarEstadoCamera(false);
+
+        if (silencioso) return;
+
+        const msg = String(err || '');
+        let textoErro = 'Não foi possível iniciar a câmera ao vivo. Tente "Ler QR Code por Foto" abaixo.';
+
+        if (msg.includes('NotAllowedError') || msg.includes('Permission')) {
+          textoErro = 'Permissão de câmera negada. Libere a câmera nas configurações do navegador e toque em Ativar Câmera novamente.';
+        } else if (msg.includes('NotFoundError')) {
+          textoErro = 'Nenhuma câmera foi detectada neste aparelho.';
+        } else if (msg.includes('NotReadableError')) {
+          textoErro = 'A câmera está sendo usada por outro aplicativo. Feche outros apps e tente novamente.';
+        }
+
+        errBox.innerText = textoErro;
+        errBox.classList.remove('hidden');
+      });
+    }
+
+    function pararScanner(callback) {
+      if (html5QrCode && cameraAtiva) {
+        html5QrCode.stop().then(() => {
+          try { html5QrCode.clear(); } catch (e) {}
+          atualizarEstadoCamera(false);
+          if (callback) callback();
+        }).catch(() => {
+          atualizarEstadoCamera(false);
+          if (callback) callback();
+        });
+      } else {
+        atualizarEstadoCamera(false);
+        if (callback) callback();
+      }
+    }
+
+    function onScanSuccess(decodedText) {
+      if (processandoLeitura) return;
+      processandoLeitura = true;
+      pararScanner(() => processarCodigo(decodedText));
+    }
+
+    function lerQrDeFoto(event) {
+      const arquivo = event.target.files && event.target.files[0];
+      event.target.value = '';
+      if (!arquivo) return;
+
+      mostrarToast('Lendo QR Code da foto...', 'toast-info', 8000);
+      pararScanner(() => {
+        const leitorArquivo = new Html5Qrcode("readerFile");
+        leitorArquivo.scanFile(arquivo, false)
+          .then(textoDecodificado => {
+            leitorArquivo.clear();
+            processarCodigo(textoDecodificado);
+          })
+          .catch(() => {
+            try { leitorArquivo.clear(); } catch (e) {}
+            mostrarToast('Não foi possível identificar um QR Code nítido na foto. Tente aproximar mais.', 'toast-err');
+          });
+      });
+    }
+
+    function processarCodigo(codigo) {
+      if (!codigo || !codigo.trim()) return;
+      crachaAtual = codigo.trim().toUpperCase();
+      mostrarToast('Consultando crachá ' + crachaAtual + '...', 'toast-info', 10000);
+
+      pararScanner(async () => {
+        try {
+          const res = await chamarApi('consultarCracha', { codigoQR: crachaAtual });
+          esconderToast();
+          document.getElementById('areaCamera').classList.add('hidden');
+
+          if (res.ativo) {
+            document.getElementById('outCracha').innerText = res.cracha;
+            document.getElementById('outNome').innerText = res.nome;
+            document.getElementById('outSetor').innerText = res.setor;
+            document.getElementById('outPaciente').innerText = res.paciente || 'Não informado';
+            document.getElementById('outEntrada').innerText = res.entrada;
+            document.getElementById('outDocumento').innerText = res.documento || '---';
+
+            const badgeLeito = document.getElementById('outLeitoBadge');
+            if (res.leito) {
+              badgeLeito.innerText = 'Leito ' + res.leito;
+              badgeLeito.classList.remove('hidden');
+            } else {
+              badgeLeito.classList.add('hidden');
+            }
+
+            const pill = document.getElementById('outTipo');
+            pill.innerText = res.tipo || 'Visitante';
+            pill.className = 'type-pill ' + classeTipo(res.tipo);
+
+            const btnSaida = document.getElementById('btnDarSaida');
+            btnSaida.classList.toggle('hidden', MODO !== 'RECEPCAO');
+            document.getElementById('areaSaida').classList.remove('hidden');
+          } else {
+            if (MODO === 'RECEPCAO') {
+              document.getElementById('crachaEntrada').value = res.cracha;
+              document.getElementById('chipCrachaEntrada').innerText = res.cracha;
+              document.getElementById('areaEntrada').classList.remove('hidden');
+            } else {
+              document.getElementById('errCracha').innerText = res.cracha;
+              document.getElementById('areaNaoAutorizado').classList.remove('hidden');
+            }
+          }
+        } catch (err) {
+          mostrarToast('Erro: ' + err.message, 'toast-err', 6000);
+          reiniciar();
+        }
+      });
+    }
+
+    function classeTipo(tipo) {
+      const t = String(tipo || '').toLowerCase();
+      if (t.includes('acomp')) return 'pill-acompanhante';
+      if (t.includes('prest')) return 'pill-prestador';
+      return 'pill-visitante';
+    }
+
+    async function enviarEntrada() {
+      const nome = document.getElementById('nome').value.trim();
+      const doc = document.getElementById('documento').value.trim();
+      if (!nome || !doc) {
+        mostrarToast('Preencha Nome e Documento antes de confirmar.', 'toast-err');
+        return;
+      }
+
+      const btn = document.getElementById('btnSalvarEntrada');
+      btn.disabled = true;
+      btn.innerText = 'Registrando...';
+
+      const form = {
+        cracha: document.getElementById('crachaEntrada').value,
+        nome: nome,
+        documento: doc,
+        tipo: tipoSelecionado,
+        setor: document.getElementById('setor').value,
+        leito: document.getElementById('leito').value,
+        paciente: document.getElementById('paciente').value,
+        motivoExtra: document.getElementById('motivoExtra').value
+      };
+
+      try {
+        const res = await chamarApi('registrarEntrada', form);
+        btn.disabled = false;
+        mostrarToast(res.mensagem, 'toast-ok');
+        reiniciar();
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerText = existeAtivoNoLeito ? 'Liberar Mesmo Assim (Acesso Extra)' : 'Confirmar Entrada';
+        mostrarToast(err.message, 'toast-err', 6000);
+      }
+    }
+
+    async function enviarSaida() {
+      const btn = document.getElementById('btnDarSaida');
+      btn.disabled = true;
+      btn.innerText = 'Finalizando...';
+
+      try {
+        const res = await chamarApi('registrarSaida', { codigoQR: crachaAtual });
+        btn.disabled = false;
+        btn.innerText = 'Registrar Saída e Liberar Crachá';
+        mostrarToast(res.mensagem, 'toast-ok');
+        reiniciar();
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerText = 'Registrar Saída e Liberar Crachá';
+        mostrarToast(err.message, 'toast-err', 6000);
+      }
+    }
+
+    function reiniciar() {
+      clearTimeout(timerLeito);
+      ultimaChaveLeito = '';
+      consultaLeitoSeq++;
+
+      document.getElementById('areaEntrada').classList.add('hidden');
+      document.getElementById('areaSaida').classList.add('hidden');
+      document.getElementById('areaNaoAutorizado').classList.add('hidden');
+      document.getElementById('areaCamera').classList.remove('hidden');
+
+      document.getElementById('leito').value = '';
+      document.getElementById('paciente').value = '';
+      document.getElementById('nome').value = '';
+      document.getElementById('documento').value = '';
+      document.getElementById('codigoManual').value = '';
+      document.getElementById('leitoFeedback').classList.add('hidden');
+      document.getElementById('cameraErroBox').classList.add('hidden');
+      limparAlertaLeito();
+
+      tipoSelecionado = 'Visitante';
+      document.querySelectorAll('.seg-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
+
+      iniciarScanner(true);
+    }
+
+    function mostrarToast(texto, classe, duracao = 4000) {
+      const el = document.getElementById('toast');
+      el.innerText = texto;
+      el.className = 'toast ' + classe;
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(esconderToast, duracao);
+    }
+
+    function esconderToast() {
+      document.getElementById('toast').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
